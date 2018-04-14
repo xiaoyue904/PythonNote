@@ -1,0 +1,117 @@
+#! /Users/hd_xiao/anaconda3/bin/python3
+#
+
+import numpy as np
+import scipy.io 
+
+
+def initia(Ni, Nh, No):
+	'''setting initia parameters'''
+	# initial parameters
+	np.random.seed(19680801)
+	# input to hiden
+	v = np.random.randn(Ni,Nh)  
+	# hiden to output
+	w = np.random.randn(Nh,No)   
+	# output threthold
+	theta = np.random.randn(No,1)
+	# hiden threthold
+	gamma = np.random.randn(Nh,1)
+
+	return v, w, theta, gamma
+
+
+
+def f(x):
+	'''Sigmoid function'''
+
+	result = 1/(1 + np.exp(-x))
+	return result
+
+
+
+def learn(x_k,y_k,v,w,gamma,theta,eta):
+	'''update parameters using BP'''
+	alpha = v.transpose().dot(x_k)
+	b = f(alpha - gamma)
+	beta = w.transpose().dot(b)
+	y_out = f(beta - theta)
+	# compute gradient terms
+	g = y_out*(1-y_out)*(y_k-y_out)
+	e = b*(1-b)*(w.dot(g))
+	# refresh parameters
+	v = v + eta*x_k.dot(e.transpose())
+	w = w + eta*b.dot(g.transpose())
+	theta = theta - eta*g
+	gamma = gamma - eta*e
+
+	return v, w, gamma, theta, y_out
+
+
+# ------------ load training data --------------------
+data_train = scipy.io.loadmat('train.mat')  
+x = data_train['x']
+# number labels
+y = 0.1*np.ones(10) + 0.8*np.eye(10)
+
+# ------------ load testing data ---------------------
+data_test = scipy.io.loadmat('test.mat')  
+test0 = data_test['test0']
+test1 = data_test['test1']
+test2 = data_test['test2']
+test3 = data_test['test3']
+test4 = data_test['test4']
+test5 = data_test['test5']
+test6 = data_test['test6']
+test7 = data_test['test7']
+test8 = data_test['test8']
+test9 = data_test['test9']
+
+# ------------- setting ------------------------------
+
+# number of neural in input layer (fixed)
+Ni = 784
+# number of neural in output layer (fixed)
+No = 10
+# number of neural in hiden layer
+Nh = 30
+# learning rate
+eta = 0.1
+# max epoch
+Nep = 10
+
+# ------------- initial parameters -------------------
+v, w, theta, gamma = initia(Ni, Nh, No)
+
+# ------------- training -----------------------------
+
+for epoch in range(1,Nep+1):
+
+	E_k = np.zeros((len(x),1))
+	for k in range(0,len(x)):
+
+		x_k = x[k,:].reshape(Ni,1)
+		y_k = y[np.mod(k,10),:].reshape(No,1)
+		v, w, gamma, theta, y_out = learn(x_k,y_k,v,w,gamma,theta,eta)
+		E_k[k] = 0.5*np.sum((y_out - y_k)**2)
+	err = np.mean(E_k)
+
+# ------------- testing -----------------------------
+	count = 0
+	total_sample = 0
+	for num_test in range(10):
+		testfile = "test" + str(num_test)
+		x_t = eval(testfile)
+
+		for i in range(len(x_t)):
+		    x_temp = x_t[i,:].reshape((Ni,1))
+		    y_t = f(w.transpose().dot(f(v.transpose().dot(x_temp)-gamma))-theta)
+		    if np.argmax(y_t) == num_test:
+		        count += 1;
+		total_sample += len(x_t)
+
+	acc = count/total_sample*100
+
+	print("%2d. Error: %.4f\t Accuracy: %2.2f%%" % (epoch, err, acc))
+
+
